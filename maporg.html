@@ -97,16 +97,14 @@
             let cumulativeDistance = 0;
             let lastMarkerPositionDistance = 0;
 
-            // --- UPDATED MARKER STYLE ---
-            const customMarkerIcon = {
+            const tinyMarkerIcon = {
                 path: google.maps.SymbolPath.CIRCLE,
-                scale: 6,           // Increased size from 4 to 6
-                fillColor: "#FF0000", // Changed to Red (hex code for red)
+                scale: 4,
+                fillColor: "#00008B",
                 fillOpacity: 1,
                 strokeWeight: 1,
-                strokeColor: "#ffffff", // White outline remains
+                strokeColor: "#ffffff",
             };
-            // --- END OF UPDATED MARKER STYLE ---
 
             for (let i = 1; i < path.length; i++) {
                 const segmentDistance =
@@ -130,7 +128,7 @@
                     new google.maps.Marker({
                         position: markerPosition,
                         map: map,
-                        icon: customMarkerIcon, // Changed to use the new customMarkerIcon
+                        icon: tinyMarkerIcon,
                         title: `Marker at ${Math.round((lastMarkerPositionDistance + distanceInterval) / 1000)} km`
                     });
 
@@ -148,6 +146,10 @@
                 : decodeURIComponent(results[1].replace(/\+/g, " "));
         }
 
+        /**
+         * NEW FUNCTION
+         * Dynamically loads the Google Maps API script using a key from the URL.
+         */
         function loadGoogleMapsApi(apiKey) {
             const script = document.createElement("script");
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
@@ -156,10 +158,12 @@
             document.head.appendChild(script);
         }
 
+        // --- SCRIPT EXECUTION STARTS HERE ---
         const apiKey = getUrlParameter('apiKey');
         if (apiKey) {
             loadGoogleMapsApi(apiKey);
         }
+        // If no apiKey is found, the script does nothing, and the message in the #map div remains.
 
     </script>
 
