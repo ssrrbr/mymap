@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Route with Dynamic Markers and API Key</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta charset="utf-8" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map">Please provide an 'apiKey' in the URL to load the map.</div>
+
+    <script>
+        // This function will be called by the Google Maps script once it's loaded
+        function initMap() {
+            // Clear the initial message from the map div
+            document.getElementById("map").textContent = "";
+
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer();
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 5,
+                center: { lat: 20.5937, lng: 78.9629 },
+            });
+
+            directionsRenderer.setMap(map);
+
+            const defaultIntervalKm = 100;
+            const intervalParam = getUrlParameter('interval');
+            let markerIntervalKm = defaultIntervalKm;
+
+            if (intervalParam && !isNaN(intervalParam) && Number(intervalParam) > 0) {
+                markerIntervalKm = Number(intervalParam);
+            }
+            const markerIntervalMeters = markerIntervalKm * 1000;
+
+            calculateAndDisplayRoute(
+                directionsService,
+                directionsRenderer,
+                map,
+                markerIntervalMeters
+            );
+        }
+
+        function calculateAndDisplayRoute(
+            directionsService,
+            directionsRenderer,
+            map,
+            markerInterval
+        ) {
+            const waypoints = [
+                {
+                    location: "Ahmedabad, Gujarat",
+                    stopover: true,
+                },
+            ];
+
+            const request = {
+                origin: "Thane, Maharashtra",
+                destination: "Sonipat, Haryana",
+                waypoints: waypoints,
+                optimizeWaypoints: true,
+                travelMode: google.maps.TravelMode.DRIVING,
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status == "OK") {
+                    directionsRenderer.setDirections(result);
+                    addMarkersAlongRoute(result, map, markerInterval);
+                } else {
+                    window.alert("Directions request failed due to " + status);
+                }
+            });
+        }
+
+        function addMarkersAlongRoute(directionsResult, map, distanceInterval) {
+            const route = directionsResult.routes[0];
+            const path = route.overview_path;
+
+            let cumulativeDistance = 0;
+            let lastMarkerPositionDistance = 0;
+
+            const tinyMarkerIcon = {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 4,
+                fillColor: "#00008B",
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: "#ffffff",
+            };
+
+            for (let i = 1; i < path.length; i++) {
+                const segmentDistance =
+                    google.maps.geometry.spherical.computeDistanceBetween(
+                        path[i - 1],
+                        path[i]
+                    );
+
+                cumulativeDistance += segmentDistance;
+
+                while (cumulativeDistance >= lastMarkerPositionDistance + distanceInterval) {
+                    const overshoot = cumulativeDistance - (lastMarkerPositionDistance + distanceInterval);
+                    const ratio = (segmentDistance - overshoot) / segmentDistance;
+
+                    const markerPosition = google.maps.geometry.spherical.interpolate(
+                        path[i - 1],
+                        path[i],
+                        ratio
+                    );
+
+                    new google.maps.Marker({
+                        position: markerPosition,
+                        map: map,
+                        icon: tinyMarkerIcon,
+                        title: `Marker at ${Math.round((lastMarkerPositionDistance + distanceInterval) / 1000)} km`
+                    });
+
+                    lastMarkerPositionDistance += distanceInterval;
+                }
+            }
+        }
+
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            const regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+            const results = regex.exec(location.search);
+            return results === null
+                ? null
+                : decodeURIComponent(results[1].replace(/\+/g, " "));
+        }
+
+        /**
+         * NEW FUNCTION
+         * Dynamically loads the Google Maps API script using a key from the URL.
+         */
+        function loadGoogleMapsApi(apiKey) {
+            const script = document.createElement("script");
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        // --- SCRIPT EXECUTION STARTS HERE ---
+        const apiKey = getUrlParameter('apiKey');
+        if (apiKey) {
+            loadGoogleMapsApi(apiKey);
+        }
+        // If no apiKey is found, the script does nothing, and the message in the #map div remains.
+
+    </script>
+
+</body>
+</html>
